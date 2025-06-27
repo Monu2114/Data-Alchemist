@@ -2,6 +2,7 @@
 import Image from "next/image";
 import InputButton from "./inputFile";
 import { useState } from "react";
+import DataTable from "./DataTable";
 
 export default function Hero() {
   const [clientsData, setClientsData] = useState([]);
@@ -41,35 +42,9 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Clients Data Table */}
-      {clientsData.length > 0 && (
-        <div className="my-4">
-          <h2 className="font-bold text-xl mb-2">Clients Data</h2>
-          <pre className="bg-white p-2 rounded">
-            {JSON.stringify(clientsData, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {/* Tasks Data Table */}
-      {tasksData.length > 0 && (
-        <div className="my-4">
-          <h2 className="font-bold text-xl mb-2">Tasks Data</h2>
-          <pre className="bg-white p-2 rounded">
-            {JSON.stringify(tasksData, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {/* Workers Data Table */}
-      {workersData.length > 0 && (
-        <div className="my-4">
-          <h2 className="font-bold text-xl mb-2">Workers Data</h2>
-          <pre className="bg-white p-2 rounded">
-            {JSON.stringify(workersData, null, 2)}
-          </pre>
-        </div>
-      )}
+      <DataTable data={clientsData} setData={setClientsData} />
+      <DataTable data={tasksData} setData={setTasksData} />
+      <DataTable data={workersData} setData={setWorkersData} />
     </section>
   );
 }
