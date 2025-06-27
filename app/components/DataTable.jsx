@@ -1,71 +1,50 @@
 "use client";
 import { useState } from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
 
-export default function DataTable({ data, setData }) {
-  const columnHelper = createColumnHelper();
+export default function DataTable({
+  data,
+  setData,
+  invalidRowIDs = [],
+  idField,
+}) {
+  const [localData, setLocalData] = useState(data);
 
-  const columns = data[0]
-    ? Object.keys(data[0]).map((key) =>
-        columnHelper.accessor(key, {
-          header: key,
-          cell: ({ getValue, row, column }) => {
-            const initialValue = getValue();
-
-            const handleChange = (e) => {
-              const updatedData = [...data];
-              updatedData[row.index][column.id] = e.target.value;
-              setData(updatedData);
-            };
-
-            return (
-              <input
-                value={initialValue}
-                onChange={handleChange}
-                className="border px-1 py-0.5 rounded w-full"
-              />
-            );
-          },
-        })
-      )
-    : [];
-
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-  if (data.length === 0) return null;
+  const handleCellChange = (rowIndex, field, value) => {
+    const updatedData = [...localData];
+    updatedData[rowIndex] = { ...updatedData[rowIndex], [field]: value };
+    setLocalData(updatedData);
+    setData(updatedData); // Trigger parent update & validation
+  };
 
   return (
-    <div className="overflow-auto max-w-full mt-4">
-      <table className="min-w-full border border-gray-400">
-        <thead className="bg-gray-200">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id} className="border px-2 py-1 text-left">
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
+    <div className="overflow-x-auto mt-4">
+      <table className="table-auto border border-gray-400 w-full text-sm">
+        <thead>
+          <tr className="bg-gray-200">
+            {Object.keys(data[0] || {}).map((key) => (
+              <th key={key} className="p-2 border border-gray-400">
+                {key}
+              </th>
+            ))}
+          </tr>
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="border px-2 py-1">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          {localData.map((row, rowIndex) => (
+            <tr
+              key={row[idField] || rowIndex}
+              className={
+                invalidRowIDs.includes(row[idField]) ? "bg-red-200" : "bg-white"
+              }
+            >
+              {Object.entries(row).map(([field, value]) => (
+                <td key={field} className="p-1 border border-gray-300">
+                  <input
+                    className="w-full p-1 border border-gray-300 rounded"
+                    value={value}
+                    onChange={(e) =>
+                      handleCellChange(rowIndex, field, e.target.value)
+                    }
+                  />
                 </td>
               ))}
             </tr>
