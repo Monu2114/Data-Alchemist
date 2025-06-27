@@ -1,7 +1,5 @@
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-
+import InputButton from "./inputFile";
 export default function Hero() {
   return (
     <section className="min-h-screen px-6 md:px-16 py-12 bg-gray-300 flex items-center">
@@ -16,24 +14,14 @@ export default function Hero() {
           </p>
 
           <div className="flex flex-col md:flex-row gap-4 mt-4">
-            <Button
-              variant="secondary"
-              className="w-32 hover:scale-105 transition"
-            >
-              Clients <Download />
-            </Button>
-            <Button
-              variant="secondary"
-              className="w-32 hover:scale-105 transition"
-            >
-              Tasks <Download />
-            </Button>
-            <Button
-              variant="secondary"
-              className="w-32 hover:scale-105 transition"
-            >
-              Workers <Download />
-            </Button>
+            {/* Clients Upload */}
+            <InputButton type="Clients" />
+
+            {/* Tasks Upload */}
+            <InputButton type="Workers" />
+
+            {/* Workers Upload */}
+            <InputButton type="Tasks" />
           </div>
         </div>
 
