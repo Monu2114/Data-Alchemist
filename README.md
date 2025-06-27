@@ -1,3 +1,4 @@
+![Uploading image.png…]()
 Data-Alchemist :
 Upload xslx format file which has to include client,tasks and worker sheets by clicking on upload file. You can then note the validation errors as well as grids highlighted, Basic NLP integrated
 
