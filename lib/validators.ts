@@ -29,10 +29,19 @@ export interface Worker {
   QualificationLevel: string;
 }
 
-const safeJSONParse = (str: string) => {
+interface NormalizedTask extends Task {
+  NormalizedPreferredPhases: number[];
+}
+
+interface WorkerSlot {
+  id: string;
+  slots: number[];
+}
+
+const safeJSONParse = (str: string): unknown => {
   try {
     return JSON.parse(str);
-  } catch (e) {
+  } catch {
     return null;
   }
 };
@@ -64,18 +73,20 @@ export function validateData(
     workers.flatMap((w) => w.Skills.split(",").map((s) => s.trim()))
   );
 
-  tasks.forEach((task) => {
-    (task as any).NormalizedPreferredPhases = normalizePhases(
-      task.PreferredPhases
-    );
-  });
-
-  const workerSlots = workers.map((w) => ({
-    id: w.WorkerID,
-    slots: safeJSONParse(w.AvailableSlots) || [],
+  // Normalize PreferredPhases in tasks
+  const tasksWithPhases: NormalizedTask[] = tasks.map((task) => ({
+    ...task,
+    NormalizedPreferredPhases: normalizePhases(task.PreferredPhases),
   }));
 
-  const invalidTasks = tasks.filter((task) => {
+  const workerSlots: WorkerSlot[] = workers.map((w) => ({
+    id: w.WorkerID,
+    slots: (Array.isArray(safeJSONParse(w.AvailableSlots))
+      ? safeJSONParse(w.AvailableSlots)
+      : []) as number[],
+  }));
+
+  const invalidTasks = tasksWithPhases.filter((task) => {
     const durationValid = Number(task.Duration) >= 1;
     const skillsValid = task.RequiredSkills.split(",").every((skill) =>
       allRequiredSkills.has(skill.trim())
@@ -84,8 +95,8 @@ export function validateData(
       Number.isInteger(Number(task.MaxConcurrent)) &&
       Number(task.MaxConcurrent) >= 0;
     const phasesValid =
-      (task as any).NormalizedPreferredPhases.length > 0 &&
-      (task as any).NormalizedPreferredPhases.every(Number.isInteger);
+      task.NormalizedPreferredPhases.length > 0 &&
+      task.NormalizedPreferredPhases.every(Number.isInteger);
     return !(durationValid && skillsValid && phasesValid && maxConcurrentValid);
   });
 
@@ -114,7 +125,8 @@ export function validateData(
     return !(skillsValid && slotsArrayValid && maxLoadValid);
   });
 
-  const uncoveredSkillsTasks = tasks.filter((task) => {
+  // Cross-Reference: Tasks must have at least one qualified worker for required skills
+  const uncoveredSkillsTasks = tasksWithPhases.filter((task) => {
     const requiredSkills = task.RequiredSkills.split(",").map((s) => s.trim());
     return !workers.some((worker) => {
       const workerSkills = worker.Skills.split(",").map((s) => s.trim());
@@ -122,9 +134,10 @@ export function validateData(
     });
   });
 
+  // Phase-slot saturation: total task durations per phase should not exceed total worker slots
   const phaseDurationMap: Record<number, number> = {};
-  tasks.forEach((task) => {
-    (task as any).NormalizedPreferredPhases.forEach((phase) => {
+  tasksWithPhases.forEach((task) => {
+    task.NormalizedPreferredPhases.forEach((phase) => {
       phaseDurationMap[phase] =
         (phaseDurationMap[phase] || 0) + Number(task.Duration);
     });
@@ -144,8 +157,13 @@ export function validateData(
     })
     .map(([phase]) => Number(phase));
 
+  // Overloaded workers: available slots < max load per phase
   const overloadedWorkers = workers.filter((worker) => {
-    const availableSlotsParsed = safeJSONParse(worker.AvailableSlots) || [];
+    const availableSlotsParsed = (
+      Array.isArray(safeJSONParse(worker.AvailableSlots))
+        ? safeJSONParse(worker.AvailableSlots)
+        : []
+    ) as number[];
     return availableSlotsParsed.length < worker.MaxLoadPerPhase;
   });
 
@@ -160,7 +178,7 @@ export function validateData(
 }
 
 export function generateRulesJson(
-  rules: any[],
+  rules: unknown[],
   priorities: Record<string, number>
 ) {
   return JSON.stringify(
