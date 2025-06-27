@@ -9,15 +9,16 @@ import Controls from "../components/Controls";
 export default function Hero() {
   const [clientsData, setClientsData] = useState([]);
   const [tasksData, setTasksData] = useState([]);
+  const [filteredTasks, setFilteredTasks] = useState([]);
   const [workersData, setWorkersData] = useState([]);
   const [validationSummary, setValidationSummary] = useState([]);
   const [validationResult, setValidationResult] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [rules, setRules] = useState([]);
 
   const handleDataParsed = (clients, tasks, workers) => {
     setClientsData(clients);
     setTasksData(tasks);
+    setFilteredTasks(tasks);
     setWorkersData(workers);
     runValidation(clients, tasks, workers);
   };
@@ -56,37 +57,6 @@ export default function Hero() {
     setValidationSummary(summary);
   };
 
-  const handleRuleAdd = () => {
-    const newRule = prompt("Enter new rule (e.g., Co-run: T1,T2)");
-    if (newRule) setRules([...rules, newRule]);
-  };
-
-  const exportData = () => {
-    const dataBlob = new Blob(
-      [
-        "Rules:\n" +
-          rules.join("\n") +
-          "\n\nClients:\n" +
-          JSON.stringify(clientsData) +
-          "\n\nTasks:\n" +
-          JSON.stringify(tasksData) +
-          "\n\nWorkers:\n" +
-          JSON.stringify(workersData),
-      ],
-      { type: "text/plain" }
-    );
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "DataAlchemistExport.txt";
-    link.click();
-  };
-
-  const filterTasks = tasksData.filter((task) => {
-    if (!searchQuery) return true;
-    return searchQuery.toLowerCase().includes("duration") && task.Duration > 1;
-  });
-
   return (
     <section className="min-h-screen px-6 md:px-16 py-12 bg-gray-300 flex flex-col items-center">
       <div className="flex flex-col md:flex-row items-center justify-around w-full gap-12">
@@ -98,25 +68,6 @@ export default function Hero() {
             Upload, validate, and export your CSV/XLSX files with ease.
           </p>
           <InputButton onDataParsed={handleDataParsed} />
-          <input
-            type="text"
-            placeholder="Search tasks (try: duration > 1)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="mt-4 p-2 rounded w-full"
-          />
-          <button
-            onClick={handleRuleAdd}
-            className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
-          >
-            Add Rule
-          </button>
-          <button
-            onClick={exportData}
-            className="mt-2 bg-green-500 text-white px-4 py-2 rounded"
-          >
-            Export Data
-          </button>
         </div>
 
         <div className="flex justify-center rotate-2">
@@ -166,15 +117,17 @@ export default function Hero() {
         <>
           <h2 className="text-xl font-bold mt-6">Tasks</h2>
           <DataTable
-            data={filterTasks}
+            data={filteredTasks}
             setData={setTasksData}
             idField="TaskID"
             invalidRowIDs={
               validationResult?.invalidTasks.map((t) => t.TaskID) || []
             }
-            onDataChange={(updated) =>
-              runValidation(clientsData, updated, workersData)
-            }
+            onDataChange={(updated) => {
+              setTasksData(updated);
+              setFilteredTasks(updated);
+              runValidation(clientsData, updated, workersData);
+            }}
           />
         </>
       )}
@@ -201,17 +154,21 @@ export default function Hero() {
           <h3 className="font-bold mb-2">Rules Config:</h3>
           <ul className="list-disc list-inside">
             {rules.map((rule, idx) => (
-              <li key={idx}>{rule}</li>
+              <li key={idx}>
+                {typeof rule === "string" ? rule : JSON.stringify(rule)}
+              </li>
             ))}
           </ul>
         </div>
       )}
+
       <Controls
         clients={clientsData}
         tasks={tasksData}
         workers={workersData}
         rules={rules}
         setRules={setRules}
+        setFilteredTasks={setFilteredTasks}
       />
     </section>
   );

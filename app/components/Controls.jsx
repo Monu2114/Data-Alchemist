@@ -6,22 +6,54 @@ import { generateRulesJson } from "@/lib/validators";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
-export default function Controls({ clients, tasks, workers, rules, setRules }) {
+export default function Controls({
+  clients,
+  tasks,
+  workers,
+  rules,
+  setRules,
+  setFilteredTasks,
+}) {
   const [searchText, setSearchText] = useState("");
-  const [filteredTasks, setFilteredTasks] = useState(tasks);
   const [priorityLevelWeight, setPriorityLevelWeight] = useState(5);
   const [requestedTasksWeight, setRequestedTasksWeight] = useState(5);
 
   const handleSearch = () => {
     const lower = searchText.toLowerCase();
-    const filtered = tasks.filter((t) => {
-      const duration = Number(t.Duration);
-      const phases = t.PreferredPhases;
-      return (
-        (lower.includes("duration") && duration > 1) ||
-        (lower.includes("phase 2") && phases.includes("2"))
+    let filtered = tasks;
+
+    // Duration > N
+    const durationMatch = lower.match(/duration\s*>\s*(\d+)/);
+    if (durationMatch) {
+      const value = Number(durationMatch[1]);
+      filtered = filtered.filter((t) => Number(t.Duration) > value);
+    }
+
+    // Phase N
+    const phaseMatch = lower.match(/phase\s*(\d+)/);
+    if (phaseMatch) {
+      const value = phaseMatch[1];
+      filtered = filtered.filter((t) => t.PreferredPhases.includes(value));
+    }
+
+    // Category contains XYZ
+    const categoryMatch = lower.match(/category\s*contains\s*(\w+)/);
+    if (categoryMatch) {
+      const value = categoryMatch[1];
+      filtered = filtered.filter((t) =>
+        t.Category.toLowerCase().includes(value)
       );
-    });
+    }
+
+    // Task Name contains XYZ
+    const nameMatch = lower.match(/task name\s*contains\s*(\w+)/);
+    if (nameMatch) {
+      const value = nameMatch[1];
+      filtered = filtered.filter((t) =>
+        t.TaskName.toLowerCase().includes(value)
+      );
+    }
+
     setFilteredTasks(filtered);
   };
 
@@ -41,10 +73,14 @@ export default function Controls({ clients, tasks, workers, rules, setRules }) {
 
     const rulesBlob = new Blob(
       [
-        generateRulesJson(rules, {
-          priorityLevelWeight,
-          requestedTasksWeight,
-        }),
+        JSON.stringify(
+          generateRulesJson(rules, {
+            priorityLevelWeight,
+            requestedTasksWeight,
+          }),
+          null,
+          2
+        ),
       ],
       { type: "application/json" }
     );
@@ -80,17 +116,12 @@ export default function Controls({ clients, tasks, workers, rules, setRules }) {
       <h2 className="text-xl font-bold mt-4">Natural Language Search</h2>
       <div className="flex gap-2">
         <Input
-          placeholder="e.g., tasks with duration > 1 and phase 2"
+          placeholder="e.g., tasks with duration > 2 and phase 3"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
         <Button onClick={handleSearch}>Search</Button>
       </div>
-      {filteredTasks.length > 0 && (
-        <p className="text-sm text-green-600">
-          Showing {filteredTasks.length} matching tasks.
-        </p>
-      )}
 
       <h2 className="text-xl font-bold mt-4">Rule Input</h2>
       <Button onClick={applyExampleRule}>Add Example Co-Run Rule</Button>

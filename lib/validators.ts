@@ -63,9 +63,7 @@ export function validateData(
   const allRequiredSkills = new Set(
     workers.flatMap((w) => w.Skills.split(",").map((s) => s.trim()))
   );
-  const validWorkerIDs = new Set(workers.map((w) => w.WorkerID));
 
-  // Normalize PreferredPhases in tasks
   tasks.forEach((task) => {
     (task as any).NormalizedPreferredPhases = normalizePhases(
       task.PreferredPhases
@@ -116,7 +114,6 @@ export function validateData(
     return !(skillsValid && slotsArrayValid && maxLoadValid);
   });
 
-  // Cross-Reference: Tasks must have at least one qualified worker for required skills
   const uncoveredSkillsTasks = tasks.filter((task) => {
     const requiredSkills = task.RequiredSkills.split(",").map((s) => s.trim());
     return !workers.some((worker) => {
@@ -125,7 +122,6 @@ export function validateData(
     });
   });
 
-  // Phase-slot saturation: total task durations per phase should not exceed total worker slots
   const phaseDurationMap: Record<number, number> = {};
   tasks.forEach((task) => {
     (task as any).NormalizedPreferredPhases.forEach((phase) => {
@@ -148,8 +144,6 @@ export function validateData(
     })
     .map(([phase]) => Number(phase));
 
-  // Overloaded workers: tasks assigned per worker per phase should not exceed MaxLoadPerPhase (assumes future assignment logic)
-  // For now, we only flag workers whose AvailableSlots < MaxLoadPerPhase overall
   const overloadedWorkers = workers.filter((worker) => {
     const availableSlotsParsed = safeJSONParse(worker.AvailableSlots) || [];
     return availableSlotsParsed.length < worker.MaxLoadPerPhase;
@@ -164,13 +158,18 @@ export function validateData(
     overloadedWorkers,
   };
 }
+
 export function generateRulesJson(
   rules: any[],
   priorities: Record<string, number>
 ) {
-  return {
-    rules,
-    priorities,
-    generatedAt: new Date().toISOString(),
-  };
+  return JSON.stringify(
+    {
+      rules,
+      priorities,
+      generatedAt: new Date().toISOString(),
+    },
+    null,
+    2
+  );
 }
